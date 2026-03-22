@@ -1,0 +1,104 @@
+import pyglet
+from pyglet.window import key, mouse
+import math
+window = pyglet.window.Window(400, 600, "Scientific Calculator")
+expression = ""
+result = ""
+last_answer = ""
+label = pyglet.text.Label(
+    "",
+    font_size=18,
+    x=10, y=550,
+    width=380,
+    multiline=True
+)
+buttons = [
+    ["7", "8", "9", "/", "sin"],
+    ["4", "5", "6", "*", "cos"],
+    ["1", "2", "3", "-", "tan"],
+    ["0", ".", "=", "+", "log"],
+    ["(", ")", "C", "sqrt", "ANS"]
+]
+button_width = 70
+button_height = 60
+button_margin = 10
+button_objects = []
+for row_idx, row in enumerate(buttons):
+    for col_idx, text in enumerate(row):
+        x = col_idx * (button_width + button_margin) + 10
+        y = 450 - row_idx * (button_height + button_margin)
+        rect = pyglet.shapes.Rectangle(x, y, button_width, button_height)
+        rect.color = (50, 50, 50)
+        lbl = pyglet.text.Label(
+            text,
+            font_size=14,
+            x=x + button_width // 2,
+            y=y + button_height // 2,
+            anchor_x="center",
+            anchor_y="center"
+        )
+        button_objects.append((rect, lbl, text))
+safe_dict = {
+    "sin": lambda x: math.sin(math.radians(x)),
+    "cos": lambda x: math.cos(math.radians(x)),
+    "tan": lambda x: math.tan(math.radians(x)),
+    "log": math.log10,
+    "sqrt": math.sqrt,
+    "pi": math.pi,
+    "e": math.e
+}
+def evaluate(expr):
+    try:
+        expr = expr.replace("^", "**")
+        return str(eval(expr, {"__builtins__": None}, safe_dict))
+    except Exception:
+        return "Error"
+@window.event
+def on_draw():
+    window.clear()
+    if expression:
+        label.text = expression
+    else:
+        label.text = f"ANS: {last_answer}" if last_answer else ""
+    label.draw()
+    for rect, lbl, _ in button_objects:
+        rect.draw()
+        lbl.draw()
+@window.event
+def on_mouse_press(x, y, button, modifiers):
+    global expression, result, last_answer
+    if button == mouse.LEFT:
+        for rect, lbl, text in button_objects:
+            if rect.x < x < rect.x + rect.width and rect.y < y < rect.y + rect.height:
+                if text == "=":
+                    result = evaluate(expression)
+                    if result != "Error":
+                        last_answer = result
+                    else:
+                        last_answer = ""
+                    expression = ""
+                    result = ""
+                elif text == "C":
+                    expression = ""
+                    result = ""
+                elif text == "ANS":
+                    expression += last_answer
+                else:
+                    expression += text
+@window.event
+def on_key_press(symbol, modifiers):
+    global expression, last_answer
+    if symbol == key.ENTER:
+        result = evaluate(expression)
+        if result != "Error":
+            last_answer = result
+        else:
+            last_answer = ""
+        expression = ""
+    elif symbol == key.BACKSPACE:
+        expression = expression[:-1]
+    elif symbol == key.ESCAPE:
+        expression = ""
+    elif symbol == key.A:
+        expression += last_answer
+pyglet.app.run()
